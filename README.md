@@ -7,8 +7,10 @@ Personal configuration for [pi coding agent](https://github.com/badlogic/pi-mono
 ```
 pi-agent/
 ├── extensions/       # Custom tools and event handlers
-│   └── brave-search.ts
+│   ├── brave-search.ts
+│   └── soul.ts       # SOUL.md loader
 ├── skills/           # On-demand capability packages
+├── SOUL.md           # AI identity and values (see soul.md)
 ├── settings.json     # Reference settings (not symlinked)
 └── install.sh        # Setup script
 ```
