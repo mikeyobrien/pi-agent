@@ -13,7 +13,7 @@ import { join } from "node:path";
  *   2. Global (~/.pi/agent/SOUL.md)
  *   3. This repo's SOUL.md
  * 
- * The soul is prepended to the system prompt on every agent start.
+ * The soul is re-read on every prompt, so edits apply immediately.
  */
 
 const SOUL_LOCATIONS = [
@@ -59,30 +59,35 @@ function getExtensionDir(): string {
 }
 
 export default function (pi: ExtensionAPI) {
-  let currentSoul: { path: string; content: string } | null = null;
+  const extensionDir = getExtensionDir();
 
-  pi.on("session_start", async (_event, ctx) => {
-    const extensionDir = getExtensionDir();
-    currentSoul = findSoul(ctx.cwd, extensionDir);
-
+  function updateStatus(ctx: { hasUI: boolean; ui: any; cwd: string }) {
+    const soul = findSoul(ctx.cwd, extensionDir);
     if (ctx.hasUI) {
-      if (currentSoul) {
-        const name = currentSoul.path.split("/").pop() || "SOUL.md";
+      if (soul) {
+        const name = soul.path.split("/").pop() || "SOUL.md";
         ctx.ui.setStatus("soul", `☯ ${name}`);
       } else {
         ctx.ui.setStatus("soul", "☯ no soul");
       }
     }
+  }
+
+  pi.on("session_start", async (_event, ctx) => {
+    updateStatus(ctx);
   });
 
   pi.on("before_agent_start", async (event, ctx) => {
-    if (!currentSoul) {
+    // Re-read soul on every prompt (picks up edits immediately)
+    const soul = findSoul(ctx.cwd, extensionDir);
+    updateStatus(ctx);
+
+    if (!soul) {
       return {};
     }
 
-    // Prepend soul to system prompt
     return {
-      systemPrompt: `${currentSoul.content}\n\n---\n\n${event.systemPrompt}`,
+      systemPrompt: `${soul.content}\n\n---\n\n${event.systemPrompt}`,
     };
   });
 
@@ -90,7 +95,6 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("soul", {
     description: "Show current SOUL.md location and content",
     handler: async (args, ctx) => {
-      const extensionDir = getExtensionDir();
       const soul = findSoul(ctx.cwd, extensionDir);
 
       if (!soul) {
